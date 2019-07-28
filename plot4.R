@@ -1,29 +1,35 @@
-dataFile <- "./data/household_power_consumption.txt"
-data <- read.table(dataFile, header=TRUE, sep=";", stringsAsFactors=FALSE, dec=".")
-subSetData <- data[data$Date %in% c("1/2/2007","2/2/2007") ,]
 
-#str(subSetData)
-datetime <- strptime(paste(subSetData$Date, subSetData$Time, sep=" "), "%d/%m/%Y %H:%M:%S") 
-globalActivePower <- as.numeric(subSetData$Global_active_power)
-globalReactivePower <- as.numeric(subSetData$Global_reactive_power)
-voltage <- as.numeric(subSetData$Voltage)
-subMetering1 <- as.numeric(subSetData$Sub_metering_1)
-subMetering2 <- as.numeric(subSetData$Sub_metering_2)
-subMetering3 <- as.numeric(subSetData$Sub_metering_3)
+# Loading the "dplyr" and "tidyr" libraries 
+library(dplyr)
+library(tidyr)
+unzip("exdata_data_household_power_consumption.zip")
+
+# Checking names of the directories available in our woring directory
+# in order to localise the one concerning us (e.g. "UCI HAR Dataset")
+list.dirs(getwd())
+list.files(getwd())
+
+# We are loading the txt file in a data frame replacing the missing values (coded as "?") with NA
+my_data <- read.delim("./household_power_consumption.txt", sep = ";", header=TRUE, na.strings="?")
+# We are converting dates columns' values in date objects in date (format yyyy/mm/dd)
+my_data$Date <- as.Date(my_data$Date, format = "%d/%m/%Y")
+# We are filtering only the rows corresponding to the dates we're interested in 
+my_data <- filter(my_data, Date == "2007/02/01" | Date == "2007/02/02")
+# We are uniting tha date and time collumns
+my_data <- unite(my_data, "Date_Time", c("Date","Time"), sep = " ")
+# We are converting the resulting character vector into class "POSIXlt" 
+my_data$Date_Time <- strptime(my_data$Date_Time, format="%Y-%m-%d %T")
 
 
-png("plot4.png", width=480, height=480)
-par(mfrow = c(2, 2)) 
-
-plot(datetime, globalActivePower, type="l", xlab="", ylab="Global Active Power", cex=0.2)
-
-plot(datetime, voltage, type="l", xlab="datetime", ylab="Voltage")
-
-plot(datetime, subMetering1, type="l", ylab="Energy Submetering", xlab="")
-lines(datetime, subMetering2, type="l", col="red")
-lines(datetime, subMetering3, type="l", col="blue")
-legend("topright", c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), lty=, lwd=2.5, col=c("black", "red", "blue"), bty="o")
-
-plot(datetime, globalReactivePower, type="l", xlab="datetime", ylab="Global_reactive_power")
-
+# --- Create and save plot in png file
+png(filename = "plot4.png") # Default values: width = 480, height = 480, units = "px"
+par(mfrow=c(2,2))
+with(my_data, plot(Date_Time, Global_active_power, type = "l", xlab = "", ylab = "Global Active Power"))
+with(my_data, plot(Date_Time, Voltage, type = "l", xlab = "datetime", ylab = "Voltage"))
+with(my_data, plot(Date_Time, Sub_metering_1, type = "l", ylab = "Energy sub metering", xlab = "" ))
+points(my_data$Date_Time, my_data$Sub_metering_2, type = "l", col="red" )
+points(my_data$Date_Time, my_data$Sub_metering_3, type = "l", col="blue" )
+legend("topright", bty = "n", legend=c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"),
+       col=c("black", "red", "blue"), lty=1)
+with(my_data, plot(Date_Time, Global_reactive_power, type = "l", xlab = "datetime", ylab = "Global_reactive_power"))
 dev.off()
